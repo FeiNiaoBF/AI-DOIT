@@ -1,0 +1,8 @@
+[project]
+name = "ReddChat AI"
+version = "0.1.0"
+description = "Reddit AI Analysis Platform Project"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
