@@ -1,20 +1,18 @@
-import os
 from flask import Flask, jsonify
-from openai import OpenAI
 
 
 def create_app(conf=None):
     """初始化app"""
-    app = Flask(__name__)
+    app = Flask(__name__, instance_relative_config=True)
     # 加载配置
-    app.config.from_object(conf)
+    app.config.from_object(
+        SECRET='dev',
+    )
 
-    # 启动相关服务
-
-    # openai
-    # reddit
-    # schedule
-    # ...
+    if conf:
+        app.config.from_mapping(conf)
+    else:
+        app.config.from_pyfile('config.py', silent=True)
 
     @app.route('/')
     def hello_world():  # put application's code here
@@ -22,5 +20,13 @@ def create_app(conf=None):
 
     if __name__ == '__main__':
         app.run()
+    # 启动相关服务
+
+    # openai
+
+    # reddit
+    # schedule
+    # ...
+
 
     return app
