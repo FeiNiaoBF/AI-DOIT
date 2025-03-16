@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import pytest
-from openai import OpenAI
 
-# 直接导入服务
+# 导入服务
 from app.services.openai_service import OpenAIService
 
 
@@ -78,9 +77,46 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaises(ValueError):
             service.change_model('invalid-model')
 
-    def test_openai_client(self):
-        """测试OpenAI客户端"""
-        openai_service = OpenAIService('api_key')
-        self.assertIsNotNone(openai_service.client)
-        self.assertIsInstance(openai_service.client, OpenAI)
+    @patch('app.services.openai_service.OpenAI')  # 使用openai.OpenAI的Mock, 替换真实的OpenAI类
+    def test_client_property(self, mock_openai):
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
 
+        # 测试默认模型
+        openai_service = OpenAIService('test_api_key', 'deepseek-chat')
+        mock_openai.assert_called_once_with(
+            api_key='test_api_key',
+            base_url='https://api.deepseek.com/'
+        )
+        # 验证客户端被正确设置
+        self.assertEqual(openai_service.client, mock_instance)
+
+        print("类 Mock 调用记录:", mock_openai.mock_calls)
+        # 查看实例方法的调用记录
+        print("实例 Mock 方法调用:", mock_instance.method_calls)
+
+    @patch('app.services.openai_service.OpenAI')
+    def test_demo_chat_response(self, mock_openai):
+        """测试聊天方法返回正确的响应"""
+        # 设置模拟响应
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "world"
+
+        # 配置模拟实例
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        mock_instance.chat.completions.create.return_value = mock_response
+
+        openai_service = OpenAIService('test_api_key', 'deepseek-chat')
+
+        messages = [{"role": "user", "content": "hello"}]
+        # TODO
+        response = openai_service.chat_completion(messages)
+        self.assertEqual(response, "world")
+
+        # 验证调用过程
+        mock_instance.chat.completions.create.assert_called_once()
+        call_args = mock_instance.chat.completions.create.call_args
+        self.assertEqual(call_args.kwargs['model'], 'deepseek-chat')
+        self.assertEqual(call_args.kwargs['messages'], messages)

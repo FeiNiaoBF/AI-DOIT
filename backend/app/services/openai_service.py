@@ -1,5 +1,5 @@
 # openai_service.py
-from typing import List, Dict, Any, Optional
+from typing import List
 from openai import OpenAI
 import logging
 
@@ -91,3 +91,18 @@ class OpenAIService:
                 api_key=self.api_key,
                 base_url=self.base_url
             )
+
+    def chat_completion(self, messages: List[dict]) -> str:
+        """
+        聊天完成
+
+        Args:
+            messages: 聊天消息列表
+
+        Returns:
+            AI生成的回复
+        """
+        return self.client.chat.completions.create(
+            model=self.default_model,
+            messages=messages
+        ).choices[0].message.content
