@@ -92,17 +92,105 @@ class OpenAIService:
                 base_url=self.base_url
             )
 
-    def chat_completion(self, messages: List[dict]) -> str:
+    def chat_completion(self, options, **kwargs):
         """
-        聊天完成
+        输入相关参数，聊天完成，返回AI生成的回复
 
         Args:
-            messages: 聊天消息列表
+            options: 聊天消息列表或包含消息列表的选项字典
+            **kwargs: 其他参数，当options是消息列表时使用
+            比如：
+            {
+                "model": "gpt-4o",
+                "messages": [
+                            {"role": "system", "content": "Hello"},
+                            {"role": "user", "content": "How are you?"}
+                ],
+                "temperature": 0.7
+                "max_tokens": 100
+                "stream": False
+            }
 
         Returns:
             AI生成的回复
+
+        Raises:
+            ValueError: 如果temperature超出范围或消息格式不正确
         """
-        return self.client.chat.completions.create(
-            model=self.default_model,
-            messages=messages
-        ).choices[0].message.content
+        # 处理输入可能是消息列表的情况
+        if isinstance(options, list):
+            messages = options
+            params = {
+                "model": self.default_model,
+                "messages": messages,
+                **kwargs
+            }
+        # 处理输入是选项字典的情况
+        elif isinstance(options, dict):
+            if 'messages' in options:
+                # 复制选项字典以避免修改原始数据
+                params = options.copy()
+                # 确保使用默认模型（如果未指定）
+                if 'model' not in params:
+                    params['model'] = self.default_model
+            else:
+                # 如果没有messages键，则假定整个字典是messages
+                params = {
+                    "model": self.default_model,
+                    "messages": options,
+                    **kwargs
+                }
+        else:
+            raise ValueError("options必须是消息列表或包含消息列表的字典")
+
+        # 验证temperature
+        if 'temperature' in params:
+            temperature = params['temperature']
+            if temperature is not None and (temperature < 0 or temperature > 2):
+                raise ValueError("temperature必须在0到2之间")
+
+        # 设置默认temperature（如果未指定）
+        if 'temperature' not in params:
+            params['temperature'] = 0.7
+
+        response = self.client.chat.completions.create(**params)
+        return response.choices[0].message.content
+
+    def chat_completion_stream(self, messages, temperature=0.7, max_tokens=None, **kwargs):
+        """
+        流式聊天完成，逐步返回生成内容
+
+        Args:
+            messages: 消息列表
+            temperature: 温度参数
+            max_tokens: 最大令牌数
+            **kwargs: 其他参数
+
+        Yields:
+            str: 每个生成的内容片段
+        """
+        # 处理输入可能是选项字典的情况
+        if isinstance(messages, dict) and 'messages' in messages:
+            options = messages
+            messages = options.pop('messages')
+            temperature = options.get('temperature', temperature)
+            max_tokens = options.get('max_tokens', max_tokens)
+
+        # 构建参数
+        params = {
+            "model": self.default_model,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True
+        }
+
+        if max_tokens is not None:
+            params["max_tokens"] = max_tokens
+
+        params.update(kwargs)
+
+        for chunk in self.client.chat.completions.create(**params):
+            if hasattr(chunk.choices[0], 'delta') and hasattr(chunk.choices[0].delta, 'content'):
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content

@@ -4,6 +4,8 @@ import pytest
 
 # 导入服务
 from app.services.openai_service import OpenAIService
+from click import option
+from openai import models
 
 
 class TestOpenAI(unittest.TestCase):
@@ -112,7 +114,10 @@ class TestOpenAI(unittest.TestCase):
 
         messages = [{"role": "user", "content": "hello"}]
         # TODO
-        response = openai_service.chat_completion(messages)
+        option = {
+            "messages": messages,
+        }
+        response = openai_service.chat_completion(option)
         self.assertEqual(response, "world")
 
         # 验证调用过程
@@ -120,3 +125,114 @@ class TestOpenAI(unittest.TestCase):
         call_args = mock_instance.chat.completions.create.call_args
         self.assertEqual(call_args.kwargs['model'], 'deepseek-chat')
         self.assertEqual(call_args.kwargs['messages'], messages)
+
+    @patch('app.services.openai_service.OpenAI')
+    def test_chat_response_with_option(self, mock_openai):
+        """测试带选项的聊天完成功能"""
+        # 设置模拟响应
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "world"
+
+        # 配置模拟实例
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        mock_instance.chat.completions.create.return_value = mock_response
+
+        openai_service = OpenAIService('test_api_key', 'deepseek-chat')
+
+        messages = [{"role": "user", "content": "hello"}]
+        options = {
+            "messages": messages,
+            "temperature": 0.5,
+            "models": "deepseek-chat"
+        }
+        response = openai_service.chat_completion(options)
+        self.assertEqual(response, "world")
+
+        # 验证调用过程
+        mock_instance.chat.completions.create.assert_called_once()
+        call_args = mock_instance.chat.completions.create.call_args
+        self.assertEqual(call_args.kwargs['model'], 'deepseek-chat')
+        self.assertEqual(call_args.kwargs['messages'], messages)
+
+    @patch('app.services.openai_service.OpenAI')
+    def test_temperature_parameter(self, mock_openai):
+        """测试temperature参数控制创意性"""
+        # 设置模拟响应
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "测试回复"
+
+        # 配置模拟实例
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        mock_instance.chat.completions.create.return_value = mock_response
+
+        service = OpenAIService('test_api_key')
+
+        # 测试默认temperature
+        messages = [{"role": "user", "content": "测试"}]
+        service.chat_completion(messages)
+        default_args = mock_instance.chat.completions.create.call_args
+        self.assertEqual(default_args.kwargs['temperature'], 0.7)  # 默认值应为0.7
+
+        # 测试自定义temperature
+        service.chat_completion(messages, temperature=0.2)
+        custom_args = mock_instance.chat.completions.create.call_args
+        self.assertEqual(custom_args.kwargs['temperature'], 0.2)
+
+        # 测试无效temperature
+        with self.assertRaises(ValueError):
+            service.chat_completion(messages, temperature=2.5)  # 超出有效范围
+
+    @patch('app.services.openai_service.OpenAI')
+    def test_max_tokens_parameter(self, mock_openai):
+        """测试max_tokens参数控制响应长度"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "测试回复"
+
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        mock_instance.chat.completions.create.return_value = mock_response
+
+        service = OpenAIService('test_api_key')
+
+        # 测试设置max_tokens
+        messages = [{"role": "user", "content": "生成一个长回复"}]
+        service.chat_completion(messages, max_tokens=500)
+        token_args = mock_instance.chat.completions.create.call_args
+        self.assertEqual(token_args.kwargs['max_tokens'], 500)
+
+    @patch('app.services.openai_service.OpenAI')
+    def test_stream_response(self, mock_openai):
+        """测试流式响应功能"""
+        # 模拟流式响应
+        chunk1 = MagicMock()
+        chunk1.choices = [MagicMock()]
+        chunk1.choices[0].delta.content = "第一"
+
+        chunk2 = MagicMock()
+        chunk2.choices = [MagicMock()]
+        chunk2.choices[0].delta.content = "部分"
+
+        chunk3 = MagicMock()
+        chunk3.choices = [MagicMock()]
+        chunk3.choices[0].delta.content = "内容"
+
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        mock_instance.chat.completions.create.return_value = [chunk1, chunk2, chunk3]
+
+        service = OpenAIService('test_api_key')
+
+        # 测试流式响应
+        messages = [{"role": "user", "content": "测试"}]
+        result = []
+        for chunk in service.chat_completion_stream(messages):
+            result.append(chunk)
+
+        self.assertEqual(result, ["第一", "部分", "内容"])
+        stream_args = mock_instance.chat.completions.create.call_args
+        self.assertTrue(stream_args.kwargs['stream'])
