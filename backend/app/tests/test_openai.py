@@ -77,3 +77,10 @@ class TestOpenAI(unittest.TestCase):
         service = OpenAIService()
         with self.assertRaises(ValueError):
             service.change_model('invalid-model')
+
+    def test_openai_client(self):
+        """测试OpenAI客户端"""
+        openai_service = OpenAIService('api_key')
+        self.assertIsNotNone(openai_service.client)
+        self.assertIsInstance(openai_service.client, OpenAI)
+
