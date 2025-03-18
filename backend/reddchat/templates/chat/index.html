@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}对话进行中 - {{ super() }}{% endblock %}
+
+{% block messages %}
+{% for message in conversation %}
+<div class="message {% if message.role == 'user' %}user-message{% else %}ai-message{% endif %}">
+    <div class="content">
+        {% if message.role == 'user' %}
+        👤 你：
+        {% else %}
+        🤖 AI：
+        {% endif %}
+        {{ message.content }}
+    </div>
+    <div class="timestamp">
+        {{ message.timestamp|datetimeformat('%Y-%m-%d %H:%M') }}
+    </div>
+</div>
+{% else %}
+<div class="empty-message">
+    还没有对话记录，开始聊天吧！
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<!-- 追加特殊样式 -->
+<style>
+    .ai-message pre {
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 自动滚动到底部
+    window.scrollTo(0, document.body.scrollHeight);
+
+    // 发送消息的示例逻辑
+    document.querySelector('button').addEventListener('click', () => {
+        const input = document.querySelector('input');
+        console.log('发送消息:', input.value);
+        input.value = '';
+    });
+</script>
+{% endblock %}

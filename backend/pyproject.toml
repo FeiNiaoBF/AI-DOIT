@@ -1,5 +1,5 @@
 [project]
-name = "reddchat-ai"
+name = "reddchat"
 version = "0.1.0"
 description = "Reddit AI Analysis Platform Project"
 readme = "README.md"
@@ -27,11 +27,11 @@ requires = ["setuptools>=65.0.0", "wheel>=0.40.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-testpaths = ["app/tests"]
+testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
 addopts = "--import-mode=importlib"
 
 [tool.setuptools]
-packages = ["app"]
+packages = ["reddchat"]

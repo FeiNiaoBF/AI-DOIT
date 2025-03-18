@@ -36,9 +36,16 @@ TODO: 任务调度，没有定时任务的实现。
 
 先来明确前端需要什么：
 
-1.
+1.一个可以对话式的表单
+2.需要将选项（）传递给后端
 
 后端的API接口设计如下：
+
+`POST /api/chat/message` - 发送聊天消息并获取 AI 回复
+`POST /api/chat/stream` - 以流式方式获取 AI 回复
+`GET /api/chat/models` - 获取支持的 AI 模型列表
+
+
 
 ### API使用
 
