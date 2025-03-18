@@ -1,7 +1,6 @@
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .config import get_config
 
 
 def create_app(test_config=None):
@@ -30,7 +29,9 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    from . import
+    from . import openai_bp
+    app.register_blueprint(openai_bp.bp)
+
     return app
 
 
