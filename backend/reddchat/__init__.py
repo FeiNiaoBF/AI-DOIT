@@ -30,7 +30,7 @@ def create_app(test_config=None):
         pass
 
     from . import openai_bp
-    app.register_blueprint(openai_bp.bp)
+    app.register_blueprint(openai_bp.bp, url_prefix='/api')
 
     return app
 

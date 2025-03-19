@@ -1,23 +1,20 @@
 # 更新设置选项（目前实现为固定返回成功消息）
 from flask import Blueprint, request, jsonify, render_template
 
-bp = Blueprint('chat_bp', __name__, url_prefix='/chat')
+bp = Blueprint('chat_bp', __name__)
 
 chat_history = [
     {"role": "bot", "message": "Hello, how can I help you today?"}
 ]
 
 
-@bp.route('/', methods=['GET'])
-def index():
-    return render_template("chat/index.html", chat_history=chat_history)
-
-
 @bp.route('/chat', methods=['POST'])
 def chat():
-    data = request.json["message"]
-    chat_history.append({"role": "user", "message": data})
-    return jsonify(success=True)
+    message = request.json["message"]
+    if message is None:
+        return jsonify(success=False, error="No message provided")
+    response = {"role": "user", "message": message}
+    return jsonify(success=True, response=response)
 
 
 @bp.route('/stream', methods=['GET'])
