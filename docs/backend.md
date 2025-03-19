@@ -2,9 +2,14 @@
 
 ### 架构
 
-首先，这个项目是一个前后端分离的项目，前端使用React NextJS。后端使用 Python Flask，前端和后端之间通过RESTful
-API（TODO）进行通信。其次，后端使用了Spring
-Security来实现用户认证和授权。最后，后端使用了Flask来操作。
+首先，这个项目是一个前后端分离的项目，前端使用React NextJS。后端使用 Python Flask，前端和后端之间通过 `RESTful`
+API（TODO）进行通信。
+
+1. 设计OpenAI服务模块与Reddit数据分析功能
+2. 制定完整的测试策略，覆盖所有API端点和服务
+3. 考虑错误处理、安全性和性能优化
+4. 定时任务每小时运行，使用APScheduler库，自动从Reddit获取新帖子和评论，进行AI分析。
+5.
 
 后端的任务是:
 
@@ -32,22 +37,153 @@ sequenceDiagram
 
 TODO: 任务调度，没有定时任务的实现。
 
+### 数据库设计
+
+我的想法是：
+> 利用定时任务每小时从Reddit获取数据，保存到SQLite数据库，然后在AI对话时从数据库中分析数据。
+> 这种方法可以减少对Reddit API的频繁调用，提升效率。
+
+#### 实现细节
+
+1. 定时任务：使用APScheduler库，(如)每小时运行一次任务，从Reddit获取新帖子和评论，存储到数据库。
+2. 数据库设计：SQLite包括posts、comments和analysis_results表，通过索引支持时间范围查询。
+3. AI分析：对话时从数据库中检索相关数据，使用OpenAI或DeepSeek API进行分析，返回结构化结果。
+
+#### 数据库内容
+
+```mermaid
+erDiagram
+    posts ||--o{ comments: "1:N"
+    posts ||--o{ analysis_results: "1:N"
+
+    posts {
+        TEXT post_id PK "Reddit帖子ID (如't3_abc123')"
+        TEXT subreddit "所属子版块(r/technology)"
+        TEXT title "标题"
+        TEXT content "内容"
+        TEXT key_words "关键词"
+        TEXT author "作者"
+        INTEGER created_utc "创建时间戳(帖子创建时间)"
+        INTEGER fetched_at "抓取时间戳(抓取到数据库的时间)"
+        TEXT url "原帖链接"
+        INTEGER score "帖子得分"
+    }
+
+    comments {
+        TEXT comment_id PK "评论ID (如't1_def456')"
+        TEXT post_id FK "关联帖子ID"
+        TEXT parent_id "父级ID(^comment_id)"
+        TEXT author "作者"
+        TEXT content "内容"
+        INTEGER created_utc "创建时间戳"
+        INTEGER score "评论得分"
+        INTEGER depth "评论层级"
+    }
+    analysis_results {
+        INTEGER result_id PK "自增主键"
+        TEXT post_id FK "关联帖子ID"
+        TEXT analysis_type "分析类型"
+        TEXT result_text "结果文本"
+        TEXT model_version "模型版本"
+        INTEGER timestamp "分析时间戳"
+        TEXT parameters "分析参数(JSON)"
+    }
+
+```
+
 ### API接口设计
 
 先来明确前端需要什么：
 
-1.一个可以对话式的表单
-2.需要将选项（）传递给后端
+1. 一个可以对话式的表单
+2. 需要将选项（api-key）传递给后端
+
+API包括聊天设置、模型列表、聊天发送（普通和流式）及Reddit数据查询，详细规范了请求和响应格式，方便前端集成。
 
 后端的API接口设计如下：
 
-`POST /api/chat/message` - 发送聊天消息并获取 AI 回复
-`POST /api/chat/stream` - 以流式方式获取 AI 回复
-`GET /api/chat/models` - 获取支持的 AI 模型列表
+#### OpenAI API
 
+`POST: /api/chat/send` - 发送聊天消息并获取 AI回复
 
+请求 response:
 
-### API使用
+| 参数      | 类型     | 描述      |
+|---------|--------|---------|
+| message | string | 用户发送的消息 |
+
+响应 response:
+
+| 参数      | 类型     | 描述      |
+|---------|--------|---------|
+| success | bool   | 是否成功    |
+| message | string | AI回复的消息 |
+| error   | string | 错误信息    |
+
+`POST: /api/chat/stream` - 以流式方式获取 AI 回复
+
+请求 response:
+
+| 参数       | 类型    | 描述          |
+|----------|-------|-------------|
+| stream   | bool  | 是否以流式方式获取回复 |
+| messages | array | 用户发送的消息     |
+
+响应 response:
+
+| 参数      | 类型     | 描述      |
+|---------|--------|---------|
+| success | bool   | 是否成功    |
+| message | string | AI回复的消息 |
+| error   | string | 错误信息    |
+
+`POST: /api/chat/settings` - 设置 AI 模型
+
+请求 response:
+
+| 参数      | 类型     | 描述      |
+|---------|--------|---------|
+| model   | string | AI 模型名称 |
+| api_key | string | API key |
+
+响应 response:
+
+| 参数      | 类型     | 描述   |
+|---------|--------|------|
+| success | bool   | 是否成功 |
+| error   | string | 错误信息 |
+
+`GET: /api/chat/models` - 获取支持的 AI 模型列表
+
+响应 response:
+
+| 参数     | 类型     | 描述      |
+|--------|--------|---------|
+| models | array  | AI 模型列表 |
+| error  | string | 错误信息    |
+
+#### Reddit API
+
+`POST | GET: /api/reddit` - 获取 Reddit 数据
+
+请求 response:
+
+| 参数        | 类型     | 描述        |
+|-----------|--------|-----------|
+| subreddit | string | Reddit 版块 |
+| time      | string | 时间范围      |
+| keyword   | string | 关键字       |
+
+响应 response:
+`TODO: Reddit API的设计`
+| 参数 | 类型 | 描述 |
+|---------|--------|-------------|
+| success | bool | 是否成功 |
+| posts | array | Reddit 帖子列表 |
+| data | object | Reddit 数据 |
+| error | string | 错误信息 |
+
+### AI API使用
 
 利用OpenAI API的SDK，可以很方便地调用OpenAI的API。
 
@@ -66,4 +202,10 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-### 项目开发步骤
+### 定时任务实现
+
+打算使用`APScheduler`
+
+每小时运行一次，获取前一小时创建的Reddit帖子和评论。
+使用PRAW库与Reddit API交互，获取指定子版块（如technology、science）的最新帖子。
+为每个新帖子获取评论，存储到数据库，并使用AI模型（如OpenAI）生成评论摘要，存储分析结果。
