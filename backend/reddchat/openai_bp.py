@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, render_template
 bp = Blueprint('chat_bp', __name__)
 
 chat_history = [
-    {"role": "bot", "message": "Hello, how can I help you today?"}
+    {"role": "server", "message": "Hello, how can I help you today?"}
 ]
 
 

@@ -14,7 +14,7 @@ def create_app(test_config=None):
         DATABASE=os.path.join(app.instance_path, 'reddchat.sqlite')
     )
     # 允许跨域请求
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     # 加载环境配置
     if test_config is None:
         # Load the instance config, if it exists, when not testing
