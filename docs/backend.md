@@ -88,7 +88,6 @@ erDiagram
         INTEGER timestamp "分析时间戳"
         TEXT parameters "分析参数(JSON)"
     }
-
 ```
 
 ### API接口设计
